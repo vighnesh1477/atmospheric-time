@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atmospheric Time</title>
+    <style>
+        /* --- RESET & BASE --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            transition: background 1s ease;
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* --- CSS VARIABLES & THEMES --- */
+        :root {
+            /* Default Fallback */
+            --bg-gradient: linear-gradient(135deg, #1e1e1e, #000000);
+            --text-color: #ffffff;
+            --accent-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            --glow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        /* SPRING (Added) */
+        body[data-season="spring"][data-time="morning"] { --bg-gradient: linear-gradient(to top, #fff1eb 0%, #ace0f9 100%); --text-color: #555; }
+        body[data-season="spring"][data-time="afternoon"] { --bg-gradient: linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%); --text-color: #444; }
+        body[data-season="spring"][data-time="evening"] { --bg-gradient: linear-gradient(to top, #fbc2eb 0%, #a6c1ee 100%); --text-color: #fff; }
+        body[data-season="spring"][data-time="night"] { --bg-gradient: linear-gradient(to top, #5f72bd 0%, #9b23ea 100%); --text-color: #fff; }
+
+        /* SUMMER */
+        body[data-season="summer"][data-time="morning"] { --bg-gradient: linear-gradient(to bottom, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); --text-color: #4a4a4a; --glass-bg: rgba(255,255,255,0.2); --glass-border: rgba(255,255,255,0.4); }
+        body[data-season="summer"][data-time="afternoon"] { --bg-gradient: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%); --text-color: #fff; }
+        body[data-season="summer"][data-time="evening"] { --bg-gradient: linear-gradient(to right, #fa709a 0%, #fee140 100%); --text-color: #fff; }
+        body[data-season="summer"][data-time="night"] { --bg-gradient: linear-gradient(to top, #30cfd0 0%, #330867 100%); --text-color: #fff; }
+
+        /* RAINY */
+        body[data-season="rainy"][data-time="morning"] { --bg-gradient: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%); --text-color: #555; --glass-bg: rgba(0,0,0,0.05); }
+        body[data-season="rainy"][data-time="afternoon"] { --bg-gradient: linear-gradient(to top, #accbee 0%, #e7f0fd 100%); --text-color: #444; }
+        body[data-season="rainy"][data-time="evening"] { --bg-gradient: linear-gradient(to top, #3b41c5 0%, #a981bb 49%, #ffc8a9 100%); --text-color: #fff; }
+        body[data-season="rainy"][data-time="night"] { --bg-gradient: linear-gradient(15deg, #13547a 0%, #80d0c7 100%); --text-color: #fff; --glass-bg: rgba(0,0,0,0.2); }
+
+        /* WINTER */
+        body[data-season="winter"][data-time="morning"] { --bg-gradient: linear-gradient(to top, #dfe9f3 0%, white 100%); --text-color: #555; }
+        body[data-season="winter"][data-time="afternoon"] { --bg-gradient: linear-gradient(to top, #e6e9f0 0%, #eef1f5 100%); --text-color: #555; }
+        body[data-season="winter"][data-time="evening"] { --bg-gradient: linear-gradient(to top, #96fbc4 0%, #f9f586 100%); --text-color: #444; }
+        body[data-season="winter"][data-time="night"] { --bg-gradient: linear-gradient(60deg, #29323c 0%, #485563 100%); --text-color: #fff; }
+
+        /* SNOWY */
+        body[data-season="snowy"][data-time="morning"] { --bg-gradient: linear-gradient(to top, #e6e9f0 0%, #eef1f5 100%); --text-color: #777; }
+        body[data-season="snowy"][data-time="afternoon"] { --bg-gradient: linear-gradient(to right, #243949 0%, #517fa4 100%); --text-color: #fff; }
+        body[data-season="snowy"][data-time="evening"] { --bg-gradient: linear-gradient(to top, #505285 0%, #585e92 12%, #65689f 25%, #7474b0 37%, #7e7ebb 50%, #8389c7 62%, #9795d4 75%, #a2a1dc 87%, #b5aee4 100%); --text-color: #fff; }
+        body[data-season="snowy"][data-time="night"] { --bg-gradient: linear-gradient(109.6deg, rgb(20, 30, 48) 11.2%, rgb(36, 59, 85) 91.1%); --text-color: #fff; }
+
+
+        /* --- CANVAS (PARTICLES) --- */
+        #particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* --- MAIN CONTAINER --- */
+        .container {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            transform: translateY(0);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* --- TIME DISPLAY --- */
+        .time-display {
+            font-size: 12vw;
+            font-weight: 200;
+            line-height: 1;
+            letter-spacing: -0.05em;
+            text-shadow: var(--shadow);
+            font-variant-numeric: tabular-nums;
+            position: relative;
+        }
+        
+        /* Subtle glow for night modes */
+        body[data-time="night"] .time-display {
+            text-shadow: 0 0 30px rgba(255,255,255,0.4);
+        }
+
+        /* --- DATE CARD --- */
+        .date-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 2rem 4rem;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 250px;
+            transition: all 0.3s ease;
+        }
+
+        .date-month {
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-weight: 400;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+        }
+
+        .date-day {
+            font-size: 5rem;
+            font-weight: 700;
+            line-height: 1;
+            margin: 0.5rem 0;
+        }
+
+        .date-year {
+            font-size: 1.2rem;
+            font-weight: 300;
+            opacity: 0.6;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .time-display { font-size: 18vw; }
+            .date-card { padding: 1.5rem 3rem; }
+            .date-day { font-size: 4rem; }
+        }
+    </style>
+</head>
+<body data-season="summer" data-time="morning">
+
+    <!-- Particle Layer -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Main Content -->
+    <main class="container">
+        <div class="time-display" id="clock">00:00:00</div>
+        
+        <div class="date-card">
+            <!-- 
+               MANUAL DATE CONFIGURATION
+               Edit the text below to change the date.
+            -->
+<div class="date-month" id="d-month"></div>
+<div class="date-day" id="d-day"></div>
+<div class="date-year" id="d-year"></div>
+
+        </div>
+    </main>
+
+    <script>
+
+
+        /**
+         * ⚙️ CONFIGURATION
+         * Change 'season' to: 'summer', 'rainy', 'winter', 'snowy', 'spring'
+         */
+        const CONFIG = {
+            season: 'spring', // MANUAL SELECTION
+            useSystemDate: false // Set to false to use the HTML hardcoded date (per prompt)
+        };
+
+        // DOM Elements
+        const body = document.body;
+        const elClock = document.getElementById('clock');
+        const elMonth = document.getElementById('d-month');
+        const elDay = document.getElementById('d-day');
+        const elYear = document.getElementById('d-year');
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+
+                function loadDateFromJson() {
+    fetch("date.json")
+        .then(response => response.json())
+        .then(data => {
+            elMonth.innerText = data.month;
+            elDay.innerText = data.day;
+            elYear.innerText = data.year;
+        })
+        .catch(err => {
+            console.error("Failed to load date.json", err);
+        });
+}
+
+        // State
+        let w, h;
+        let particles = [];
+        let timePeriod = 'morning';
+
+        /* -------------------------------------------------------------------------- */
+        /* TIME & DATE LOGIC                           */
+        /* -------------------------------------------------------------------------- */
+
+        function updateTime() {
+            const now = new Date();
+            
+            // 1. Digital Clock
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            elClock.innerText = `${hours}:${minutes}:${seconds}`;
+
+
+
+            // 3. Detect Time of Day
+            const h = now.getHours();
+            let newPeriod = '';
+            
+            if (h >= 5 && h < 12) newPeriod = 'morning';
+            else if (h >= 12 && h < 17) newPeriod = 'afternoon';
+            else if (h >= 17 && h < 20) newPeriod = 'evening';
+            else newPeriod = 'night';
+
+            // Only update DOM if changed to prevent repaint flashing
+            if (newPeriod !== timePeriod) {
+                timePeriod = newPeriod;
+                applyTheme();
+            }
+        }
+
+        function applyTheme() {
+            body.setAttribute('data-season', CONFIG.season);
+            body.setAttribute('data-time', timePeriod);
+            initParticles(); // Restart particles when theme changes
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* PARTICLE SYSTEM                                */
+        /* -------------------------------------------------------------------------- */
+
+        class RainDrop {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * w;
+                this.y = Math.random() * -h; // Start above screen
+                this.velocity = Math.random() * 5 + 10;
+                this.len = Math.random() * 20 + 10;
+                this.opacity = Math.random() * 0.3 + 0.1;
+            }
+            update() {
+                this.y += this.velocity;
+                if (this.y > h) this.reset();
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.lineWidth = 1;
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x, this.y + this.len);
+                ctx.stroke();
+            }
+        }
+
+        class Snowflake {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * w;
+                this.y = Math.random() * -h;
+                this.size = Math.random() * 3 + 1;
+                this.speed = Math.random() * 1 + 0.5;
+                this.drift = Math.random() * 1 - 0.5;
+                this.opacity = Math.random() * 0.5 + 0.2;
+            }
+            update() {
+                this.y += this.speed;
+                this.x += this.drift;
+                if (this.y > h) this.reset();
+                if (this.x > w || this.x < 0) this.reset();
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            let count = 0;
+            
+            // Logic based on season
+            if (CONFIG.season === 'rainy') {
+                count = 150; // Heavy rain
+                for(let i=0; i<count; i++) particles.push(new RainDrop());
+            } else if (CONFIG.season === 'snowy') {
+                count = 100;
+                for(let i=0; i<count; i++) particles.push(new Snowflake());
+            } else if (CONFIG.season === 'winter' && timePeriod === 'night') {
+                 // Light snow for winter nights
+                 count = 30;
+                 for(let i=0; i<count; i++) particles.push(new Snowflake());
+            }
+            // Summer/Spring/Others have clear skies (no particles)
+        }
+
+        function animateParticles() {
+            if (particles.length === 0) {
+                ctx.clearRect(0, 0, w, h);
+                requestAnimationFrame(animateParticles);
+                return;
+            }
+
+            ctx.clearRect(0, 0, w, h);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+
+        function handleResize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+            initParticles(); // Re-distribute
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /* INIT                                        */
+        /* -------------------------------------------------------------------------- */
+
+        window.addEventListener('resize', handleResize);
+        
+handleResize();
+loadDateFromJson();   // 👈 ADD THIS
+updateTime();
+setInterval(updateTime, 1000);
+animateParticles();
+
+
+    </script>
+</body>
+</html>
