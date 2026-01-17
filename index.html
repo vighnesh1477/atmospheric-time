@@ -125,6 +125,21 @@
             min-width: 250px;
             transition: all 0.3s ease;
         }
+        /* --- MOTIVATION QUOTE CARD --- */
+.quote-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    padding: 1.5rem 3rem;
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    max-width: 700px;
+}
+
+
+
 
         .date-month {
             font-size: 1.5rem;
@@ -146,6 +161,25 @@
             font-size: 1.2rem;
             font-weight: 300;
             opacity: 0.6;
+        }
+
+
+        .quote-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 0.8rem;
+            opacity: 0.7;
+            font-weight: 600;
+        }
+
+        .quote-text {
+            font-size: 1.1rem;
+            font-style: italic;
+            opacity: 0.9;
+            font-weight: 300;
+            line-height: 1.5;
+            font-family: "Segoe UI", serif; /* Elegant touch */
         }
 
         @keyframes float {
@@ -176,16 +210,21 @@
                MANUAL DATE CONFIGURATION
                Edit the text below to change the date.
             -->
-<div class="date-month" id="d-month"></div>
-<div class="date-day" id="d-day"></div>
-<div class="date-year" id="d-year"></div>
-
+            <div class="date-month" id="d-month">JAN</div>
+            <div class="date-day" id="d-day">17</div>
+            <div class="date-year" id="d-year">2026</div>
         </div>
-    </main>
+        <div class="quote-card">
+    <div class="quote-title">Today’s Motivation</div>
+    <div class="quote-text" id="d-quote"></div>
+</div>
+
+
+       
+</main>
+
 
     <script>
-
-
         /**
          * ⚙️ CONFIGURATION
          * Change 'season' to: 'summer', 'rainy', 'winter', 'snowy', 'spring'
@@ -201,10 +240,16 @@
         const elMonth = document.getElementById('d-month');
         const elDay = document.getElementById('d-day');
         const elYear = document.getElementById('d-year');
+        const elQuote = document.getElementById('d-quote');
+
+        
+        // New Elements
+
+
         const canvas = document.getElementById('particle-canvas');
         const ctx = canvas.getContext('2d');
 
-
+        // Fetch Data from JSON
 function loadDateFromJson() {
     fetch("date.json?ts=" + Date.now())
         .then(response => response.json())
@@ -212,6 +257,11 @@ function loadDateFromJson() {
             elMonth.innerText = data.month;
             elDay.innerText = data.day;
             elYear.innerText = data.year;
+
+            // NEW: quote support
+            if (data.quote) {
+                elQuote.innerText = `"${data.quote}"`;
+            }
         })
         .catch(err => {
             console.error("Failed to load date.json", err);
@@ -237,7 +287,13 @@ function loadDateFromJson() {
             const seconds = String(now.getSeconds()).padStart(2, '0');
             elClock.innerText = `${hours}:${minutes}:${seconds}`;
 
-
+            // 2. Date (if enabled)
+            if (CONFIG.useSystemDate) {
+                const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+                elMonth.innerText = months[now.getMonth()];
+                elDay.innerText = String(now.getDate()).padStart(2, '0');
+                elYear.innerText = now.getFullYear();
+            }
 
             // 3. Detect Time of Day
             const h = now.getHours();
@@ -362,12 +418,13 @@ function loadDateFromJson() {
 
         window.addEventListener('resize', handleResize);
         
-handleResize();
-loadDateFromJson();   // 👈 ADD THIS
-updateTime();
-setInterval(updateTime, 1000);
-animateParticles();
-
+        // Boot
+        handleResize(); 
+        loadDateFromJson();
+ // Trigger fetch
+        updateTime();   
+        setInterval(updateTime, 1000); 
+        animateParticles(); 
 
     </script>
 </body>
