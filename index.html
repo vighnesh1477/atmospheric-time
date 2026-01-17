@@ -204,8 +204,9 @@
         const canvas = document.getElementById('particle-canvas');
         const ctx = canvas.getContext('2d');
 
-                function loadDateFromJson() {
-    fetch("date.json")
+
+function loadDateFromJson() {
+    fetch("date.json?ts=" + Date.now())
         .then(response => response.json())
         .then(data => {
             elMonth.innerText = data.month;
@@ -216,6 +217,7 @@
             console.error("Failed to load date.json", err);
         });
 }
+
 
         // State
         let w, h;
